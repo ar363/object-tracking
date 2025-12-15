@@ -5,7 +5,7 @@ from ultralytics import YOLO
 import os
 
 
-def train_tracking_model(data_yaml="synthetic_data/data.yaml", epochs=50, img_size=640):
+def train_tracking_model(data_yaml="synthetic_data/data.yaml", epochs=5, img_size=320):
     """Train YOLO model on synthetic data."""
     
     # Load a pretrained YOLO model (using nano for speed)
@@ -21,19 +21,27 @@ def train_tracking_model(data_yaml="synthetic_data/data.yaml", epochs=50, img_si
         data=data_yaml,
         epochs=epochs,
         imgsz=img_size,
-        batch=16,
+        batch=32,
         name='synthetic_tracker',
-        patience=10,
+        patience=3,
         save=True,
-        device='cpu'  # Change to 'cuda' if GPU available
+        device='cuda' if os.getenv('CUDA_VISIBLE_DEVICES') else 'cpu',
+        cache=True,
+        workers=8,
+        half=True,
+        amp=True
     )
     
-    print("\nTraining complete!")
-    print(f"Model saved to: runs/detect/synthetic_tracker/weights/best.pt")
+    # Get the actual save path from the results
+    save_dir = results.save_dir
+    model_path = f"{save_dir}/weights/best.pt"
     
-    return "runs/detect/synthetic_tracker/weights/best.pt"
+    print("\nTraining complete!")
+    print(f"Model saved to: {model_path}")
+    
+    return model_path
 
 
 if __name__ == "__main__":
-    model_path = train_tracking_model(epochs=50)
+    model_path = train_tracking_model(epochs=5)
     print(f"\nTrained model: {model_path}")

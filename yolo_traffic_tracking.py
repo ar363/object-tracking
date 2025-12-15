@@ -10,6 +10,14 @@ model = YOLO("yolo11n.pt")
 video_path = "cars2.mp4"
 cap = cv2.VideoCapture(video_path)
 
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+fps = 20.0 
+
+fourcc = cv2.VideoWriter_fourcc(*'XVID') 
+out = cv2.VideoWriter('output.avi', fourcc, fps, (frame_width, frame_height))
+
+
 track_history = defaultdict(lambda: [])
 while cap.isOpened():
     success, frame = cap.read()
@@ -33,6 +41,7 @@ while cap.isOpened():
                 points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
                 cv2.polylines(frame, [points], isClosed=False, color=(230, 230, 230), thickness=10)
 
+        out.write(frame)
         cv2.imshow("YOLO11 Tracking", frame)
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -40,5 +49,6 @@ while cap.isOpened():
     else:
         break
 
+out.release()
 cap.release()
 cv2.destroyAllWindows()

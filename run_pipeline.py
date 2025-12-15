@@ -27,7 +27,7 @@ def run_complete_pipeline():
     print("\n[2/4] Training object detection model...")
     print("-" * 60)
     start = time.time()
-    model_path = train_tracking_model(data_yaml=str(data_yaml), epochs=50)
+    model_path = train_tracking_model(data_yaml=str(data_yaml), epochs=5)
     print(f"Time taken: {time.time() - start:.2f}s")
     
     # Step 3: Generate test video

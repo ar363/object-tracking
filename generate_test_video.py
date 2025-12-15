@@ -8,30 +8,33 @@ from pathlib import Path
 
 
 def generate_random_trajectory(num_frames, img_width, img_height, obj_size):
-    """Generate a smooth random trajectory for an object."""
-    start_x = np.random.randint(obj_size, img_width - obj_size)
-    start_y = np.random.randint(obj_size, img_height - obj_size)
+    """Generate a smooth random trajectory for an object using circular/elliptical motion."""
+    # Random center point
+    center_x = np.random.randint(100, img_width - 100)
+    center_y = np.random.randint(100, img_height - 100)
     
-    vx = np.random.uniform(-4, 4)
-    vy = np.random.uniform(-4, 4)
+    # Random radius and speed
+    radius_x = np.random.randint(50, min(center_x - obj_size, img_width - center_x - obj_size))
+    radius_y = np.random.randint(50, min(center_y - obj_size, img_height - center_y - obj_size))
+    speed = np.random.uniform(0.02, 0.05)
+    
+    # Random starting angle
+    start_angle = np.random.uniform(0, 2 * np.pi)
     
     positions = []
     for i in range(num_frames):
-        noise_x = np.random.normal(0, 0.3)
-        noise_y = np.random.normal(0, 0.3)
+        angle = start_angle + speed * i
+        x = center_x + radius_x * np.cos(angle)
+        y = center_y + radius_y * np.sin(angle)
         
-        x = start_x + vx * i + noise_x
-        y = start_y + vy * i + noise_y
+        # Add small smooth noise
+        noise_x = np.sin(i * 0.1) * 2
+        noise_y = np.cos(i * 0.15) * 2
         
-        if x < obj_size or x > img_width - obj_size:
-            vx = -vx
-        if y < obj_size or y > img_height - obj_size:
-            vy = -vy
+        x = int(np.clip(x + noise_x, obj_size, img_width - obj_size))
+        y = int(np.clip(y + noise_y, obj_size, img_height - obj_size))
         
-        x = np.clip(x, obj_size, img_width - obj_size)
-        y = np.clip(y, obj_size, img_height - obj_size)
-        
-        positions.append((int(x), int(y)))
+        positions.append((x, y))
     
     return positions
 
@@ -63,6 +66,17 @@ def generate_test_video(output_path="test_video.mp4", num_frames=200, num_object
                       np.random.randint(50, 255)))
         shapes.append(np.random.choice([0, 1, 2]))  # circle, rect, triangle
         sizes.append(obj_size)
+    
+    trajectory_data = {
+        'trajectories': trajectories,
+        'colors': colors,
+        'shapes': shapes,
+        'sizes': sizes,
+        'num_frames': num_frames,
+        'num_objects': num_objects,
+        'img_width': img_width,
+        'img_height': img_height
+    }
     
     # Generate frames
     for frame_idx in range(num_frames):
@@ -102,9 +116,16 @@ def generate_test_video(output_path="test_video.mp4", num_frames=200, num_object
     
     out.release()
     print(f"\nTest video saved to: {output_path}")
-    return output_path
+    
+    # Save trajectory data
+    import pickle
+    trajectory_path = output_path.replace('.mp4', 'tj.pkl')
+    with open(trajectory_path, 'wb') as f:
+        pickle.dump(trajectory_data, f)
+    
+    return output_path, trajectory_data
 
 
 if __name__ == "__main__":
-    video_path = generate_test_video(num_frames=200, num_objects=5)
+    video_path, _ = generate_test_video(num_frames=200, num_objects=5)
     print(f"\nVideo ready for tracking: {video_path}")
