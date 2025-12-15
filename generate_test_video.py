@@ -1,0 +1,110 @@
+"""
+Generate a test video with synthetic objects for tracking evaluation.
+"""
+import numpy as np
+import cv2
+import os
+from pathlib import Path
+
+
+def generate_random_trajectory(num_frames, img_width, img_height, obj_size):
+    """Generate a smooth random trajectory for an object."""
+    start_x = np.random.randint(obj_size, img_width - obj_size)
+    start_y = np.random.randint(obj_size, img_height - obj_size)
+    
+    vx = np.random.uniform(-4, 4)
+    vy = np.random.uniform(-4, 4)
+    
+    positions = []
+    for i in range(num_frames):
+        noise_x = np.random.normal(0, 0.3)
+        noise_y = np.random.normal(0, 0.3)
+        
+        x = start_x + vx * i + noise_x
+        y = start_y + vy * i + noise_y
+        
+        if x < obj_size or x > img_width - obj_size:
+            vx = -vx
+        if y < obj_size or y > img_height - obj_size:
+            vy = -vy
+        
+        x = np.clip(x, obj_size, img_width - obj_size)
+        y = np.clip(y, obj_size, img_height - obj_size)
+        
+        positions.append((int(x), int(y)))
+    
+    return positions
+
+
+def generate_test_video(output_path="test_video.mp4", num_frames=200, num_objects=5, fps=30):
+    """Generate a test video with moving synthetic objects."""
+    
+    img_width, img_height = 640, 480
+    
+    print(f"Generating test video: {output_path}")
+    print(f"Frames: {num_frames}, Objects: {num_objects}, FPS: {fps}")
+    
+    # Setup video writer
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (img_width, img_height))
+    
+    # Generate trajectories
+    trajectories = []
+    colors = []
+    shapes = []
+    sizes = []
+    
+    for obj_idx in range(num_objects):
+        obj_size = np.random.randint(15, 35)
+        trajectory = generate_random_trajectory(num_frames, img_width, img_height, obj_size)
+        trajectories.append(trajectory)
+        colors.append((np.random.randint(50, 255), 
+                      np.random.randint(50, 255), 
+                      np.random.randint(50, 255)))
+        shapes.append(np.random.choice([0, 1, 2]))  # circle, rect, triangle
+        sizes.append(obj_size)
+    
+    # Generate frames
+    for frame_idx in range(num_frames):
+        # Create background
+        img = np.ones((img_height, img_width, 3), dtype=np.uint8) * 200
+        noise = np.random.randint(0, 30, (img_height, img_width, 3), dtype=np.uint8)
+        img = cv2.add(img, noise)
+        
+        # Draw objects
+        for obj_idx in range(num_objects):
+            x, y = trajectories[obj_idx][frame_idx]
+            size = sizes[obj_idx]
+            color = colors[obj_idx]
+            shape = shapes[obj_idx]
+            
+            if shape == 0:  # Circle
+                cv2.circle(img, (x, y), size, color, -1)
+                cv2.circle(img, (x, y), size, (0, 0, 0), 2)
+            elif shape == 1:  # Rectangle
+                cv2.rectangle(img, (x - size, y - size), (x + size, y + size), color, -1)
+                cv2.rectangle(img, (x - size, y - size), (x + size, y + size), (0, 0, 0), 2)
+            else:  # Triangle
+                pts = np.array([[x, y - size], 
+                               [x - size, y + size], 
+                               [x + size, y + size]], np.int32)
+                cv2.fillPoly(img, [pts], color)
+                cv2.polylines(img, [pts], True, (0, 0, 0), 2)
+        
+        # Add frame number
+        cv2.putText(img, f"Frame: {frame_idx}", (10, 30), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+        
+        out.write(img)
+        
+        if (frame_idx + 1) % 50 == 0:
+            print(f"Generated {frame_idx + 1}/{num_frames} frames")
+    
+    out.release()
+    print(f"\nTest video saved to: {output_path}")
+    return output_path
+
+
+if __name__ == "__main__":
+    video_path = generate_test_video(num_frames=200, num_objects=5)
+    print(f"\nVideo ready for tracking: {video_path}")

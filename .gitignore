@@ -1,0 +1,4 @@
+runs/
+synthetic_data/
+__pycache__/
+*.pyc
