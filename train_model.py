@@ -5,8 +5,8 @@ from ultralytics import YOLO
 import os
 
 
-def train_tracking_model(data_yaml="synthetic_data/data.yaml", epochs=5, img_size=320):
-    """Train YOLO model on synthetic data."""
+def train_tracking_model(data_yaml="synthetic_data/data.yaml", epochs=15, img_size=640):
+    """Train YOLO model on synthetic data with improved config."""
     
     # Load a pretrained YOLO model (using nano for speed)
     model = YOLO('yolo11n.pt')
@@ -17,19 +17,24 @@ def train_tracking_model(data_yaml="synthetic_data/data.yaml", epochs=5, img_siz
     print(f"Image size: {img_size}")
     
     # Train the model
+    use_cuda = bool(os.getenv('CUDA_VISIBLE_DEVICES'))
     results = model.train(
         data=data_yaml,
         epochs=epochs,
         imgsz=img_size,
-        batch=32,
+        batch=0,  # auto batch size
         name='synthetic_tracker',
-        patience=3,
+        patience=5,
         save=True,
-        device='cuda' if os.getenv('CUDA_VISIBLE_DEVICES') else 'cpu',
+        device='cuda' if use_cuda else 'cpu',
         cache=True,
         workers=8,
-        half=True,
-        amp=True
+        amp=use_cuda,
+        optimizer='AdamW',
+        lr0=0.001,
+        weight_decay=0.0005,
+        cos_lr=True,
+        verbose=True
     )
     
     # Get the actual save path from the results
@@ -43,5 +48,5 @@ def train_tracking_model(data_yaml="synthetic_data/data.yaml", epochs=5, img_siz
 
 
 if __name__ == "__main__":
-    model_path = train_tracking_model(epochs=5)
+    model_path = train_tracking_model(epochs=15)
     print(f"\nTrained model: {model_path}")
